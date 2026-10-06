@@ -83,8 +83,8 @@ int main() {
 
         glfwPollEvents();
 
-        ImGui_ImplGlfw_NewFrame();
         ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         application::update(currentTime, deltaTime);

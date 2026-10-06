@@ -309,30 +309,54 @@ void shutdown() {
 }
 
 void update([[maybe_unused]] double time, double deltaTime) {
-    ImGui::Begin("Lab 1: Octahedron Controls");
-    
-    ImGui::Text("1. Projection Mode");
-    ImGui::Checkbox("Perspective Projection", &state.isPerspective);
-    ImGui::Separator();
-    
-    ImGui::Text("2. Object Transformations");
-    ImGui::SliderFloat3("Position", &state.position.x, -5.0f, 5.0f);
-    ImGui::SliderFloat3("Rotation", &state.rotation.x, 0.0f, 360.0f);
-    ImGui::SliderFloat3("Scale", &state.scale.x, 0.1f, 3.0f);
-    ImGui::Separator();
-    
-    ImGui::Text("3. Trajectory & Animation");
-    ImGui::Checkbox("Animate", &state.isAnimating);
-    ImGui::SliderFloat("Speed", &state.animSpeed, 0.1f, 5.0f);
+    ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(380, 550), ImGuiCond_FirstUseEver);
+
+    ImGui::Begin("Lab 1 - Octahedron");
+
+    ImGui::Text("Variant 7: 1225 vertices, 2304 triangles, 2 objects");
+
+    const char* projItems[] = { "Perspective", "Orthographic" };
+    ImGui::Combo("Projection", &state.projectionType, projItems, IM_ARRAYSIZE(projItems));
+    if (state.projectionType == 0) {
+        ImGui::SliderFloat("Field of view", &state.fov, 10.0f, 120.0f);
+    }
+
+    auto renderObjectUI = [](const char* headerName, ObjectState& obj) {
+        if (ImGui::CollapsingHeader(headerName, ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::DragFloat3("Position", &obj.position.x, 0.05f);
+            ImGui::DragFloat3("Rotation (deg)", &obj.rotation.x, 1.0f);
+            ImGui::DragFloat3("Scale", &obj.scale.x, 0.05f);
+            ImGui::ColorEdit3("Color multiplier", &obj.color.x);
+            ImGui::Checkbox("Trajectory", &obj.useTrajectory);
+        }
+    };
+
+    renderObjectUI("Octahedron 1", state.obj1);
+    renderObjectUI("Octahedron 2", state.obj2);
+
+    if (ImGui::Button(state.isPaused ? "Resume" : "Pause")) {
+        state.isPaused = !state.isPaused;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) {
+        state.animTime = 0.0f;
+    }
+
+    ImGui::SliderFloat("Speed", &state.animSpeed, 0.0f, 5.0f);
     ImGui::SliderFloat("Radius", &state.animRadius, 0.0f, 5.0f);
+    ImGui::SliderFloat("Height", &state.animHeight, 0.0f, 5.0f);
+
     ImGui::Separator();
-    
-    ImGui::Text("4 & 5. Color Settings");
-    ImGui::ColorEdit4("Base UI Color", &state.baseColor.x);
-    
+    ImGui::Checkbox("Show ImGui demo", &state.showDemoWindow);
+
+    if (state.showDemoWindow) {
+        ImGui::ShowDemoWindow(&state.showDemoWindow);
+    }
+
     ImGui::End();
 
-    if (state.isAnimating) {
+    if (!state.isPaused) {
         state.animTime += static_cast<float>(deltaTime) * state.animSpeed;
     }
 }
@@ -349,34 +373,36 @@ void render(const graphics::internal::FrameData& fd) {
     glm::mat4 proj;
     float aspectRatio = static_cast<float>(ctx.swapchain_extent.width) / 
                         static_cast<float>(ctx.swapchain_extent.height);
-    if (state.isPerspective) {
-        proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    
+    if (state.projectionType == 0) {
+        proj = glm::perspective(glm::radians(state.fov), aspectRatio, 0.1f, 100.0f);
     } else {
         proj = glm::ortho(-2.0f * aspectRatio, 2.0f * aspectRatio, -2.0f, 2.0f, 0.1f, 100.0f);
     }
     proj[1][1] *= -1.0f;
 
-    auto drawObject = [&](const glm::vec3& offset, const glm::vec3& scaleOverride, VkDescriptorSet descSet) {
+    auto drawObject = [&](const ObjectState& obj, VkDescriptorSet descSet) {
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, state.position + offset);
         
-        if (state.isAnimating) {
-            float x = cos(state.animTime) * state.animRadius;
-            float y = sin(state.animTime * 0.5f) * state.animRadius;
-            float z = sin(state.animTime) * state.animRadius;
-            model = glm::translate(model, glm::vec3(x, y, z));
+        glm::vec3 currentPos = obj.position;
+        
+        if (obj.useTrajectory) {
+            currentPos.x += cos(state.animTime) * state.animRadius;
+            currentPos.y += sin(state.animTime) * state.animHeight;
+            currentPos.z += sin(state.animTime) * state.animRadius;
         }
         
-        model = glm::rotate(model, glm::radians(state.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(state.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(state.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::scale(model, state.scale * scaleOverride);
+        model = glm::translate(model, currentPos);
+        model = glm::rotate(model, glm::radians(obj.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(obj.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(obj.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::scale(model, obj.scale);
 
         UniformBufferObject ubo = {};
         ubo.model = model;
         ubo.view = view;
         ubo.proj = proj;
-        ubo.uiColor = state.baseColor;
+        ubo.uiColor = glm::vec4(obj.color, 1.0f);
 
         void* mappedData;
         VmaAllocation alloc = (descSet == descriptorSets[0]) ? uboBufferAlloc1 : uboBufferAlloc2;
@@ -406,8 +432,8 @@ void render(const graphics::internal::FrameData& fd) {
         vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     };
 
-    drawObject(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f), descriptorSets[0]);
-    drawObject(glm::vec3(1.5f, 0.0f, 0.0f), glm::vec3(0.5f), descriptorSets[1]);
+    drawObject(state.obj1, descriptorSets[0]);
+    drawObject(state.obj2, descriptorSets[1]);
 }
 
-}
+} // namespace application

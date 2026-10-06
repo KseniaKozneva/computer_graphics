@@ -1,9 +1,7 @@
 #pragma once
 
 #include <cstdint>
-
 #include <vulkan/vulkan_core.h>
-
 #include <vk_mem_alloc.h>
 
 struct GLFWwindow;
@@ -11,23 +9,23 @@ struct GLFWwindow;
 namespace graphics::internal {
 
 struct Context {
-	VkPhysicalDevice physical_device;
-	VkDevice device;
+    VkPhysicalDevice physical_device;
+    VkDevice device;
 
-	VmaAllocator allocator;
+    VmaAllocator allocator;
 
-	VkQueue graphics_queue;
-	uint32_t graphics_queue_index;
+    VkQueue graphics_queue;
+    uint32_t graphics_queue_index;
 
-	VkFormat swapchain_format;
-	VkExtent2D swapchain_extent;
+    VkFormat swapchain_format;
+    VkExtent2D swapchain_extent;
 
-	VkRenderPass render_pass;
+    VkRenderPass render_pass;
 };
 
 struct FrameData {
-	VkFramebuffer framebuffer;
-	VkCommandBuffer command_buffer;
+    VkFramebuffer framebuffer;
+    VkCommandBuffer command_buffer;
 };
 
 extern Context context;

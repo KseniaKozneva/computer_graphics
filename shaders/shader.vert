@@ -16,5 +16,6 @@ void main() {
     vec4 proceduralColor = vec4(abs(inPosition), 1.0);
     
     fragColor = proceduralColor; 
+    
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 }
