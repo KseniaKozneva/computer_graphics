@@ -13,9 +13,13 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    vec4 proceduralColor = vec4(abs(inPosition), 1.0);
-    
-    fragColor = proceduralColor; 
-    
+    vec3 normalized = inPosition / vec3(0.8, 0.6, 0.5);
+
+    vec3 color = (normalized + 1.0) * 0.5;
+
+    vec4 proceduralColor = vec4(color, 1.0);
+
+    fragColor = proceduralColor;
+
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 }
