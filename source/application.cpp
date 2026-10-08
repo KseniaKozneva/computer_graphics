@@ -6,18 +6,36 @@
 
 namespace application {
 
+constexpr float a = 0.8f;   // половина ширины по X
+constexpr float b = 0.6f;   // половина высоты по Y
+constexpr float c = 0.5f;   // половина глубины по Z
+
 const std::vector<Vertex> vertices = {
-    {{ 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
-    {{ 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
-    {{ 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
-    {{-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
-    {{ 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
-    {{ 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}}
+    // нижняя грань (y = -b)
+    {{-a, -b, -c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 0
+    {{ a, -b, -c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 1
+    {{ a, -b,  c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 2
+    {{-a, -b,  c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 3
+    // верхняя грань (y = +b)
+    {{-a,  b, -c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 4
+    {{ a,  b, -c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 5
+    {{ a,  b,  c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 6
+    {{-a,  b,  c}, {1.0f, 1.0f, 1.0f, 1.0f}},  // 7
 };
 
 const std::vector<uint16_t> indices = {
-    0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 1,
-    5, 2, 1,  5, 3, 2,  5, 4, 3,  5, 1, 4
+    // нижняя грань (y = -b)
+    0, 2, 1,  0, 3, 2,
+    // верхняя грань (y = +b)
+    4, 5, 6,  4, 6, 7,
+    // передняя грань (z = +c)
+    3, 7, 6,  3, 6, 2,
+    // задняя грань (z = -c)
+    0, 1, 5,  0, 5, 4,
+    // левая грань (x = -a)
+    0, 4, 7,  0, 7, 3,
+    // правая грань (x = +a)
+    1, 2, 6,  1, 6, 5,
 };
 
 VkBuffer vertexBuffer;
@@ -30,11 +48,11 @@ VmaAllocation uboBufferAlloc1;
 VkBuffer uboBuffer2;
 VmaAllocation uboBufferAlloc2;
 
-VkDescriptorSetLayout descriptorSetLayout;
-VkPipelineLayout pipelineLayout;
-VkPipeline graphicsPipeline;
-VkDescriptorPool descriptorPool;
-std::vector<VkDescriptorSet> descriptorSets;
+VkDescriptorSetLayout descriptorSetLayout;   // как устроен один set
+VkPipelineLayout pipelineLayout;             // какие set'ы использует pipeline
+VkPipeline graphicsPipeline;                 // сам pipeline (шейдеры + состояния)
+VkDescriptorPool descriptorPool;             // аллокатор для descriptor set'ов
+std::vector<VkDescriptorSet> descriptorSets; // конкретные данные (буферы, текстуры)
 
 AppState state;
 
@@ -66,7 +84,7 @@ bool initialize() {
         .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
     };
     vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &vertexBuffer, &vertexBufferAlloc, nullptr);
-    
+
     void* data;
     vmaMapMemory(allocator, vertexBufferAlloc, &data);
     memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
@@ -76,7 +94,7 @@ bool initialize() {
     bufferInfo.size = bufferSize;
     bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &indexBuffer, &indexBufferAlloc, nullptr);
-    
+
     vmaMapMemory(allocator, indexBufferAlloc, &data);
     memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
     vmaUnmapMemory(allocator, indexBufferAlloc);
@@ -84,7 +102,7 @@ bool initialize() {
     bufferSize = sizeof(UniformBufferObject);
     bufferInfo.size = bufferSize;
     bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    
+
     vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &uboBuffer1, &uboBufferAlloc1, nullptr);
     vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &uboBuffer2, &uboBufferAlloc2, nullptr);
 
@@ -169,7 +187,7 @@ bool initialize() {
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .primitiveRestartEnable = VK_FALSE
     };
-    
+
     VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         .viewportCount = 1,
@@ -185,12 +203,12 @@ bool initialize() {
         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .lineWidth = 1.0f
     };
-    
+
     VkPipelineMultisampleStateCreateInfo multisampling = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
     };
-    
+
     VkPipelineDepthStencilStateCreateInfo depthStencil = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
@@ -269,7 +287,7 @@ bool initialize() {
         .offset = 0,
         .range = sizeof(UniformBufferObject)
     };
-    
+
     VkWriteDescriptorSet descriptorWrites[] = {
         {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -296,12 +314,12 @@ bool initialize() {
 void shutdown() {
     auto& ctx = graphics::internal::context;
     vkQueueWaitIdle(ctx.graphics_queue);
-    
+
     vkDestroyDescriptorPool(ctx.device, descriptorPool, nullptr);
     vkDestroyPipeline(ctx.device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(ctx.device, pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(ctx.device, descriptorSetLayout, nullptr);
-    
+
     vmaDestroyBuffer(ctx.allocator, vertexBuffer, vertexBufferAlloc);
     vmaDestroyBuffer(ctx.allocator, indexBuffer, indexBufferAlloc);
     vmaDestroyBuffer(ctx.allocator, uboBuffer1, uboBufferAlloc1);
@@ -312,9 +330,9 @@ void update([[maybe_unused]] double time, double deltaTime) {
     ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(380, 550), ImGuiCond_FirstUseEver);
 
-    ImGui::Begin("Lab 1 - Octahedron");
+    ImGui::Begin("Lab 1 - Parallelepiped");
 
-    ImGui::Text("Variant 7: 1225 vertices, 2304 triangles, 2 objects");
+    ImGui::Text("Variant 3: Parallelepiped, 8 vertices, 12 triangles, 2 objects");
 
     const char* projItems[] = { "Perspective", "Orthographic" };
     ImGui::Combo("Projection", &state.projectionType, projItems, IM_ARRAYSIZE(projItems));
@@ -322,18 +340,23 @@ void update([[maybe_unused]] double time, double deltaTime) {
         ImGui::SliderFloat("Field of view", &state.fov, 10.0f, 120.0f);
     }
 
+    // ИСПРАВЛЕНО: добавлены PushID/PopID, чтобы у двух объектов
+    // с одинаковыми метками ("Position", "Rotation (deg)", ...)
+    // не было конфликта ID в ImGui.
     auto renderObjectUI = [](const char* headerName, ObjectState& obj) {
         if (ImGui::CollapsingHeader(headerName, ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushID(headerName);
             ImGui::DragFloat3("Position", &obj.position.x, 0.05f);
             ImGui::DragFloat3("Rotation (deg)", &obj.rotation.x, 1.0f);
             ImGui::DragFloat3("Scale", &obj.scale.x, 0.05f);
             ImGui::ColorEdit3("Color multiplier", &obj.color.x);
             ImGui::Checkbox("Trajectory", &obj.useTrajectory);
+            ImGui::PopID();
         }
     };
 
-    renderObjectUI("Octahedron 1", state.obj1);
-    renderObjectUI("Octahedron 2", state.obj2);
+    renderObjectUI("Parallelepiped 1", state.obj1);
+    renderObjectUI("Parallelepiped 2", state.obj2);
 
     if (ImGui::Button(state.isPaused ? "Resume" : "Pause")) {
         state.isPaused = !state.isPaused;
@@ -363,35 +386,41 @@ void update([[maybe_unused]] double time, double deltaTime) {
 
 void render(const graphics::internal::FrameData& fd) {
     auto& ctx = graphics::internal::context;
-    
+
     glm::mat4 view = glm::lookAt(
         glm::vec3(0.0f, 0.0f, 5.0f),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
-    
+
     glm::mat4 proj;
-    float aspectRatio = static_cast<float>(ctx.swapchain_extent.width) / 
+    float aspectRatio = static_cast<float>(ctx.swapchain_extent.width) /
                         static_cast<float>(ctx.swapchain_extent.height);
-    
+
     if (state.projectionType == 0) {
         proj = glm::perspective(glm::radians(state.fov), aspectRatio, 0.1f, 100.0f);
     } else {
-        proj = glm::ortho(-2.0f * aspectRatio, 2.0f * aspectRatio, -2.0f, 2.0f, 0.1f, 100.0f);
+        // ИСПРАВЛЕНО: увеличен объём ортографической проекции и
+        // использован отрицательный near. Камера на Z=5, объекты на Z=0 —
+        // near=-100 гарантирует, что они не отсекутся.
+        constexpr float orthoSize = 3.0f;
+        proj = glm::ortho(-orthoSize * aspectRatio, orthoSize * aspectRatio,
+                          -orthoSize, orthoSize,
+                          -100.0f, 100.0f);
     }
     proj[1][1] *= -1.0f;
 
     auto drawObject = [&](const ObjectState& obj, VkDescriptorSet descSet) {
         glm::mat4 model = glm::mat4(1.0f);
-        
+
         glm::vec3 currentPos = obj.position;
-        
+
         if (obj.useTrajectory) {
             currentPos.x += cos(state.animTime) * state.animRadius;
             currentPos.y += sin(state.animTime) * state.animHeight;
             currentPos.z += sin(state.animTime) * state.animRadius;
         }
-        
+
         model = glm::translate(model, currentPos);
         model = glm::rotate(model, glm::radians(obj.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::rotate(model, glm::radians(obj.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -411,9 +440,9 @@ void render(const graphics::internal::FrameData& fd) {
         vmaUnmapMemory(ctx.allocator, alloc);
 
         vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-        vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        vkCmdBindDescriptorSets(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipelineLayout, 0, 1, &descSet, 0, nullptr);
-        
+
         VkViewport viewport = {
             0.0f, 0.0f,
             static_cast<float>(ctx.swapchain_extent.width),
@@ -428,7 +457,7 @@ void render(const graphics::internal::FrameData& fd) {
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(fd.command_buffer, 0, 1, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(fd.command_buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-        
+
         vkCmdDrawIndexed(fd.command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     };
 

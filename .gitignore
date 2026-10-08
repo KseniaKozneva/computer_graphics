@@ -1,3 +1,14 @@
+# Сборка
+build-debug/
+build-release/
 build-*/
-shaders/*.spv
-imgui.ini
+
+# Скомпилированные шейдеры
+*.spv
+
+# Файлы IDE
+.vs/
+.vscode/
+.idea/
+*.user
+cmake-build-*/

@@ -28,7 +28,9 @@ struct FrameData {
     VkCommandBuffer command_buffer;
 };
 
-extern Context context;
+extern Context context; //Объявление глобальной переменной context типа Context.
+
+//extern — «эта переменная объявлена здесь, но определена где-то в другом .cpp-файле»
 
 bool initialize(GLFWwindow* const window);
 void shutdown();

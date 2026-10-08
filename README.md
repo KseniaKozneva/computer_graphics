@@ -1,66 +1,40 @@
-# 🌋 Vulkan Starter App
+# 🌋 CG Lab #1 — Вариант 3: Параллелепипед
 
-## Getting started
+Лабораторная по компьютерной графике: параллелепипед, перспективная и ортографическая проекции, аффинные преобразования, анимация по траектории, интерфейс на ImGui.
 
-You need C++ compiler, Vulkan SDK and CMake installed before you can build this project.
+## Требования
 
-This project uses C++20 standard and thus requires either of those compilers:
-- GCC 10.X
-- Clang 10
-- Microsoft Visual Studio 2019
+- C++ компилятор (GCC 10+, Clang 10+, MSVC 2019+).
+- Vulkan SDK.
+- CMake 3.20+.
+- C++20.
 
-This is officially tested on *Windows* and *GNU/Linux platforms*, no *macOS* support yet.
-If you have a working macOS solution of this code, consider submitting a PR so others
-can build this example code without a hassle!
+## Сборка
 
-<ins>**1. Downloading the repository**</ins>
+    # Конфигурация (Windows + Visual Studio)
+    cmake --preset msvc-debug
 
-Start by cloning the repository with `git clone --depth 1 https://github.com/vladeemerr/vulkan-starter-app`
+    # Сборка
+    cmake --build build-debug --config Debug --parallel
 
-This repository does not contain any submodules, it utilizes CMake's `FetchContent` feature instead.
+Пресеты: `debug`, `release`, `msvc-debug`, `msvc-release`, `mingw-debug`, `mingw-release`.
 
-<ins>**2. Configuring the project**</ins>
+**Важно:** у всех `*-debug` пресетов одна директория - `build-debug`. При смене пресета удалить её:
 
-Run either one of the CMake lines to download dependencies and configure the project:
+    Remove-Item -Recurse -Force build-debug   # Windows
+    rm -rf build-debug                         # Linux
 
-```bash
-cmake --preset debug       # for GNU/Linux (GCC/Clang)
-cmake --preset msvc-debug  # for Windows (Visual Studio 2019)
-cmake --preset mingw-debug # for Windows (MinGW)
-```
+Шейдеры компилируются автоматически через `glslc`. Если его нет - CMake выдаст предупреждение, и `.spv` не создадутся. Тогда вручную:
 
-If you wish to build in `release` mode, change `debug` to `release`.
+    glslc shaders/shader.vert -o shaders/shader.vert.spv
+    glslc shaders/shader.frag -o shaders/shader.frag.spv
 
-If changes are made (added/removed files), or if you want to regenerate project files, rerun the command above.
+## Запуск
 
-<ins>**3. Building**</ins>
+Рабочая директория должна быть **корнем проекта** — иначе не найдутся шейдеры (`shaders/*.spv`).
 
-To build the project, use the line below. You are most likely using `debug` preset, so
-the directory that will eventually contain your build files is named `build-debug`.
+    # Windows (Visual Studio)
+    .\build-debug\Debug\vulkan-starter-app.exe
 
-Likewise for `release` that directory will be named `build-release`
-
-Run one those commands, depending on which preset you chose:
-
-```bash
-cmake --build build-debug --parallel # for debug
-cmake --build build-release --parallel # for release
-```
-
-### Running
-
-`build-*` directory will contain the executable in one of the subdirectories after successful build.
-
-For `msvc-{debug|release}` builds output subdirectory is set to `Debug` or `Release` respectively.
-For other configurations output subdirectory is set to `vulkan-starter-app`.
-
-**Make sure your working directory is set to the project root!**
-Project root is where this README file resides. Otherwise, the
-code responsible for loading shaders or other resources from files will fail,
-because relative paths are used.
-
-### Compiling shaders
-
-`CMakeLists.txt` has a build recipe for compiling shader files
-along with an application. Look for a comment in this file to see
-how to compile your shaders.
+    # Linux
+    ./build-debug/vulkan-starter-app/vulkan-starter-app

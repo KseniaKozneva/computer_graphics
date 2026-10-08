@@ -1,27 +1,26 @@
 cmake_minimum_required(VERSION 3.20)
 project(vulkan-starter-app LANGUAGES C CXX)
 
-# 1. Создаем исполняемый файл
+# Создаем исполняемый файл
 add_executable(${PROJECT_NAME}
     source/main.cpp
     source/graphics_internal.cpp
     source/application.cpp
 )
 
-# 2. Настройки стандарта C++
+# Настройки стандарта C++
 set_target_properties(${PROJECT_NAME} PROPERTIES 
     CXX_STANDARD 20 
     CXX_STANDARD_REQUIRED TRUE
 )
 
-# 3. Настройки компилятора для разных платформ
+# Настройки компилятора для разных платформ
 if(LINUX OR APPLE)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
 elseif(WIN32)
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PRIVATE /W4 /wd4201)
         # /subsystem:windows убирает консольное окно при запуске. 
-        # Если тебе нужна консоль для отладки (cout/cerr), закомментируй следующую строку:
         target_link_options(${PROJECT_NAME} PRIVATE /subsystem:console) 
     else()
         target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
@@ -32,7 +31,7 @@ else()
     message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} is not supported")
 endif()
 
-# 4. Подключение зависимостей через FetchContent
+# Подключение зависимостей через FetchContent
 include(FetchContent)
 
 FetchContent_Declare(
@@ -59,7 +58,7 @@ FetchContent_Declare(
     GIT_TAG v1.92.9
 )
 
-# !!! ВАЖНО ДЛЯ ЛАБЫ: Добавляем библиотеку GLM для работы с матрицами и векторами !!!
+
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -78,25 +77,25 @@ FetchContent_MakeAvailable(
     vk-bootstrap
     VulkanMemoryAllocator
     imgui
-    glm # Добавляем GLM в сборку
+    glm 
 )
 
-# 5. Линковка библиотек
+# Линковка библиотек
 target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     Vulkan::Vulkan
     vk-bootstrap::vk-bootstrap
     GPUOpen::VulkanMemoryAllocator
-    glm::glm # Линкуем GLM
+    glm::glm 
 )
 
-# 6. Include директории для ImGui
+# Include директории для ImGui
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${imgui_SOURCE_DIR} 
     ${imgui_SOURCE_DIR}/backends
 )
 
-# 7. Исходные файлы ImGui
+# Исходные файлы ImGui
 target_sources(${PROJECT_NAME} PRIVATE
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
@@ -107,7 +106,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
 )
 
-# 8. Компиляция шейдеров
+# Компиляция шейдеров
 # Ищем glslc сначала в PATH, потом в переменной окружения VULKAN_SDK
 find_program(GLSLC_EXECUTABLE glslc HINTS $ENV{VULKAN_SDK}/Bin $ENV{VULKAN_SDK}/bin)
 
@@ -128,7 +127,6 @@ if(GLSLC_EXECUTABLE)
         list(APPEND _SHADER_BINARIES ${SHADER_BINARY_PATH})
     endmacro()
 
-    # Укажи здесь имена всех своих шейдерных файлов (без расширения .spv)
     compile_shader(shader.vert)
     compile_shader(shader.frag)
 
@@ -138,7 +136,7 @@ else()
     message(WARNING "glslc not found! Shaders will not be compiled automatically. Please compile them manually or check your VULKAN_SDK environment variable.")
 endif()
 
-# 9. Специфичные настройки для MinGW (если используешь его вместо MSVC)
+# Специфичные настройки для MinGW 
 if (MINGW)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-stack-protector)
     target_link_options(${PROJECT_NAME} PRIVATE -lucrt)
