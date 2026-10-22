@@ -2,6 +2,7 @@
 build-debug/
 build-release/
 build-*/
+build/
 
 # Скомпилированные шейдеры
 *.spv
