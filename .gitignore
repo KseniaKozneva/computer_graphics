@@ -1,0 +1,15 @@
+build*/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+
+*.spv
+
+imgui.ini
+
+*.log
+.vs/
+.idea/
+*.user
+Thumbs.db
+desktop.ini
